@@ -9,31 +9,16 @@ import seaborn as sns
 from sqlalchemy import create_engine
 from pandas.api.types import is_datetime64_any_dtype, is_string_dtype
 
-
-# =========================
-# CONFIGURAÇÃO DA PÁGINA
-# =========================
-
 st.set_page_config(
     page_title="G2 - Vendas em E-commerce no Brasil",
     page_icon="🛒",
     layout="wide"
 )
 
-
-# =========================
-# CAMINHOS E URL DA BASE
-# =========================
-
 RAW_URL = "https://raw.githubusercontent.com/AlexandreLouzada/Dados-Simulados-G2/main/datasets_g2_30_temas/simulacao_ecommerce_brasil.csv"
 
 LOCAL_PATH = Path("dados/simulacao_ecommerce_brasil.csv")
-DB_PATH = Path("database/ecommerce.db")
-
-
-# =========================
-# FUNÇÕES AUXILIARES
-# =========================
+DB_PATH = Path("/tmp/ecommerce.db")
 
 def normalizar_coluna(nome: str) -> str:
     """
@@ -89,10 +74,8 @@ def carregar_dados():
         df = pd.read_csv(RAW_URL)
         df.to_csv(LOCAL_PATH, index=False)
 
-    # Normalizar nomes das colunas
     df.columns = [normalizar_coluna(c) for c in df.columns]
 
-    # Tentar converter colunas numéricas que vierem como texto
     for col in df.columns:
         if df[col].dtype == "object" or is_string_dtype(df[col]):
             tentativa = (
@@ -107,11 +90,9 @@ def carregar_dados():
 
             convertido = pd.to_numeric(tentativa, errors="coerce")
 
-            # Só converte se a maior parte da coluna for numérica
             if convertido.notna().mean() > 0.7:
                 df[col] = convertido
 
-    # Criar coluna de data, caso existam ano e mês
     col_ano = encontrar_coluna(df, ["ano", "year"])
     col_mes = encontrar_coluna(df, ["mes", "month"])
 
@@ -149,19 +130,16 @@ def aplicar_filtros(df):
 
     filtrado = df.copy()
 
-    # Colunas categóricas: texto/string com poucas opções
     colunas_categoricas = [
         c for c in df.columns
         if (df[c].dtype == "object" or is_string_dtype(df[c])) and df[c].nunique() <= 80
     ]
 
-    # Colunas de data
     colunas_data = [
         c for c in df.columns
         if is_datetime64_any_dtype(df[c])
     ]
 
-    # Criar filtros categóricos limpos
     for col in colunas_categoricas[:6]:
         opcoes = sorted(df[col].dropna().unique().tolist())
 
@@ -175,7 +153,6 @@ def aplicar_filtros(df):
         if selecionados:
             filtrado = filtrado[filtrado[col].isin(selecionados)]
 
-    # Filtro de data com Data início e Data fim lado a lado
     if "data" in colunas_data:
         data_min = df["data"].min()
         data_max = df["data"].max()
@@ -211,18 +188,8 @@ def aplicar_filtros(df):
 
     return filtrado
 
-
-# =========================
-# CARREGAMENTO DOS DADOS
-# =========================
-
 df = carregar_dados()
 salvar_sqlite(df)
-
-
-# =========================
-# CABEÇALHO DO DASHBOARD
-# =========================
 
 st.title("Projeto G2 — Vendas em E-commerce no Brasil")
 
@@ -240,11 +207,6 @@ with st.expander("Visualizar estrutura da base de dados"):
     st.write(list(df.columns))
     st.dataframe(df.head(20), use_container_width=True)
 
-
-# =========================
-# APLICAÇÃO DOS FILTROS
-# =========================
-
 filtrado = aplicar_filtros(df)
 
 numericas = filtrado.select_dtypes(include=np.number).columns.tolist()
@@ -253,11 +215,6 @@ categoricas = [
     c for c in filtrado.columns
     if filtrado[c].dtype == "object" or is_string_dtype(filtrado[c])
 ]
-
-
-# =========================
-# IDENTIFICAÇÃO AUTOMÁTICA DE COLUNAS IMPORTANTES
-# =========================
 
 col_faturamento = encontrar_coluna(
     filtrado,
@@ -278,11 +235,6 @@ col_cancelamento = encontrar_coluna(
     filtrado,
     ["cancelamento", "cancelado"]
 )
-
-
-# =========================
-# KPIS
-# =========================
 
 st.subheader("KPIs principais")
 
@@ -344,11 +296,6 @@ with col4:
 
 st.divider()
 
-
-# =========================
-# ANÁLISE POR DIMENSÃO
-# =========================
-
 st.subheader("Análise por categoria ou dimensão")
 
 if numericas and categoricas:
@@ -408,11 +355,6 @@ else:
 
 st.divider()
 
-
-# =========================
-# ANÁLISE TEMPORAL
-# =========================
-
 st.subheader("Análise temporal")
 
 if "data" in filtrado.columns and numericas:
@@ -468,11 +410,6 @@ else:
 
 st.divider()
 
-
-# =========================
-# CORRELAÇÃO ESTATÍSTICA
-# =========================
-
 st.subheader("Correlação estatística")
 
 if len(numericas) >= 2:
@@ -505,19 +442,9 @@ else:
 
 st.divider()
 
-
-# =========================
-# TABELA FINAL
-# =========================
-
 st.subheader("Tabela filtrada")
 
 st.dataframe(filtrado, use_container_width=True)
-
-
-# =========================
-# CONCLUSÃO EXECUTIVA
-# =========================
 
 st.subheader("Conclusão executiva")
 
