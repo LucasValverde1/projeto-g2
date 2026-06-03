@@ -109,23 +109,23 @@ def carregar_dados():
 
 
 def salvar_sqlite(df: pd.DataFrame):
-    """
-    Salva a base em SQLite.
-    Isso atende à funcionalidade avançada de persistência em banco.
-    """
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    engine = create_engine(f"sqlite:///{DB_PATH}")
-    df.to_sql("vendas_ecommerce", engine, if_exists="replace", index=False)
+    try:
+        engine = create_engine(f"sqlite:///{DB_PATH}")
+        df.to_sql("vendas_ecommerce", engine, if_exists="replace", index=False)
+        return engine
 
-    return engine
+    except Exception as erro:
+        st.warning(
+            "A persistência em SQLite não foi executada neste ambiente, "
+            "mas o dashboard continuará funcionando normalmente."
+        )
+        st.caption(f"Detalhe técnico: {erro}")
+        return None
 
 
 def aplicar_filtros(df):
-    """
-    Cria filtros interativos no menu lateral do Streamlit.
-    Os filtros começam limpos e só afetam o dashboard quando o usuário seleciona algo.
-    """
+
     st.sidebar.header("Filtros")
 
     filtrado = df.copy()
